@@ -265,6 +265,13 @@ extension BodyView {
         return copy
     }
 
+    /// Highlights only the given side's paths (midline paths always fill).
+    public func highlight(_ muscle: Muscle, color: Color = .red, opacity: Double = 1.0, sides: Set<MuscleSide>) -> BodyView {
+        var copy = self
+        copy.highlights[muscle] = MuscleHighlight(muscle: muscle, color: color, opacity: opacity, sides: sides)
+        return copy
+    }
+
     /// Highlights multiple muscles with the same color.
     public func highlight(_ muscles: [Muscle], color: Color = .red, opacity: Double = 1.0) -> BodyView {
         var copy = self
