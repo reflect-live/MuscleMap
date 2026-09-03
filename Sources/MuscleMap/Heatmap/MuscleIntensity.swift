@@ -41,20 +41,25 @@ public struct MuscleHighlight: Sendable, Equatable {
     public let color: Color
     public let opacity: Double
     public let fill: MuscleFill
+    /// Which side's paths this highlight fills. Midline (`common`) paths are
+    /// always filled. Default highlights both sides (upstream behavior).
+    public let sides: Set<MuscleSide>
 
     /// Creates a highlight with a solid color.
-    public init(muscle: Muscle, color: Color, opacity: Double = 1.0) {
+    public init(muscle: Muscle, color: Color, opacity: Double = 1.0, sides: Set<MuscleSide> = [.left, .right, .both]) {
         self.muscle = muscle
         self.color = color
         self.opacity = opacity
         self.fill = .color(color)
+        self.sides = sides
     }
 
     /// Creates a highlight with a custom fill (gradient or color).
-    public init(muscle: Muscle, fill: MuscleFill, opacity: Double = 1.0) {
+    public init(muscle: Muscle, fill: MuscleFill, opacity: Double = 1.0, sides: Set<MuscleSide> = [.left, .right, .both]) {
         self.muscle = muscle
         self.fill = fill
         self.opacity = opacity
+        self.sides = sides
         switch fill {
         case .color(let color):
             self.color = color

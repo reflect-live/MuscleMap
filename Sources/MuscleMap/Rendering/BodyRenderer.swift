@@ -102,7 +102,7 @@ struct BodyRenderer {
                 bodyPart.left.map { ($0, .left) } +
                 bodyPart.right.map { ($0, .right) }
 
-            for (pathString, _) in allPaths {
+            for (pathString, pathSide) in allPaths {
                 let path = pathCache.path(
                     for: pathString,
                     scale: scale,
@@ -110,12 +110,23 @@ struct BodyRenderer {
                     offsetY: offsetY
                 )
 
-                let boundingRect = path.boundingRect
-                let shading = fill.shading(in: boundingRect)
+                // Side-scoped highlight: midline paths always take the
+                // highlight; left/right paths only when listed in `sides`.
+                let sideMatches = pathSide == .both
+                    || highlight.map { $0.sides.contains(pathSide) } ?? true
+                let pathFill = sideMatches ? fill : resolveFill(
+                    for: bodyPart.slug, highlight: nil, isSelected: isSelected
+                )
+                let pathHasHighlight = highlight != nil && sideMatches
+                let pathNeedsOpacityLayer = needsOpacityLayer && pathHasHighlight
+                let pathNeedsShadow = needsShadow && pathHasHighlight
 
-                if needsShadow || needsOpacityLayer {
+                let boundingRect = path.boundingRect
+                let shading = pathFill.shading(in: boundingRect)
+
+                if pathNeedsShadow || pathNeedsOpacityLayer {
                     context.drawLayer { layerContext in
-                        if needsShadow {
+                        if pathNeedsShadow {
                             layerContext.addFilter(.shadow(
                                 color: style.shadowColor,
                                 radius: style.shadowRadius,
@@ -123,7 +134,7 @@ struct BodyRenderer {
                                 y: style.shadowOffset.height
                             ))
                         }
-                        if needsOpacityLayer {
+                        if pathNeedsOpacityLayer {
                             layerContext.opacity = highlightOpacity
                         }
                         if isSelected && selectionPulseFactor != 1.0 {
@@ -162,9 +173,26 @@ struct BodyRenderer {
 
     }
 
-    /// Find which muscle was tapped at the given point.
+    /// Find which muscle was tapped at the given point. Exact path hit first;
+    /// on a miss, sample expanding rings so taps in the gaps between muscle
+    /// paths (or on thin joints like knees) snap to the nearest muscle.
     /// Sub-groups are tested before their parent groups.
     func hitTest(at point: CGPoint, in size: CGSize) -> (Muscle, MuscleSide)? {
+        if let hit = exactHitTest(at: point, in: size) { return hit }
+        for radius in [CGFloat(6), 11, 16] {
+            for step in 0..<8 {
+                let angle = CGFloat(step) * .pi / 4
+                let probe = CGPoint(
+                    x: point.x + radius * cos(angle),
+                    y: point.y + radius * sin(angle)
+                )
+                if let hit = exactHitTest(at: probe, in: size) { return hit }
+            }
+        }
+        return nil
+    }
+
+    private func exactHitTest(at point: CGPoint, in size: CGSize) -> (Muscle, MuscleSide)? {
         let viewBox = BodyPathProvider.viewBox(gender: gender, side: side)
         let scale = min(
             size.width / viewBox.size.width,
