@@ -215,13 +215,10 @@ struct BodyRenderer {
             guard let muscle = bodyPart.slug.muscle else { continue }
             if hideSubGroups && muscle.isSubGroup && !muscle.isAlwaysVisibleSubGroup { continue }
 
-            // Always-visible sub-groups return parent when sub-groups are hidden
-            let resolvedMuscle: Muscle
-            if hideSubGroups && muscle.isAlwaysVisibleSubGroup, let parent = muscle.parentGroup {
-                resolvedMuscle = parent
-            } else {
-                resolvedMuscle = muscle
-            }
+            // Always-visible sub-groups are rendered even when sub-groups are
+            // hidden — so a tap on them selects THEM, not the parent group
+            // (tapping the adductors used to select hamstring).
+            let resolvedMuscle = muscle
 
             for pathString in bodyPart.left {
                 let path = pathCache.path(for: pathString, scale: scale, offsetX: offsetX, offsetY: offsetY)
